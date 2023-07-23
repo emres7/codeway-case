@@ -1,4 +1,4 @@
-const { InternalServerError } = require('../../errors');
+const { InternalServerError } = require('../errors');
 
 const withServiceErrorHandling = (func) => {
     return async (...args) => {

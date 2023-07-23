@@ -1,4 +1,4 @@
-const { InternalServerError } = require('../../errors');
+const { InternalServerError } = require('../errors');
 
 class ResponseHandler {
     static sendSuccess(res, data, statusCode = 200) {
@@ -11,7 +11,6 @@ class ResponseHandler {
     }
 
     static handleDefaultError(res, err) {
-        console.log(err?.message)
         const defaultError = new InternalServerError(err?.message);
 
         return this.handle(res, defaultError);

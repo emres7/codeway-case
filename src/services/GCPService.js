@@ -12,20 +12,9 @@ const tableId = process.env.TABLE_ID;
 const pubSubClient = new PubSub({ projectId });
 const bigqueryClient = new BigQuery({ projectId });
 
-const publishData = withServiceErrorHandling(async (publisableData) => {
-  const reqData = {
-    type: "event",
-    session_id: "9FDA74C2-AB57-4840-87D0-64324772B5A2",
-    event_name: "click",
-    page: "main",
-    event_time: 1589623711,
-    country: "TR",
-    region: "Marmaray",
-    city: "Istanbul",
-    user_id: "Uu1qJzlfrxYxOS5z1kfAbmSA5pF2",
-  };
-  const data = JSON.stringify(reqData);
-  // Publishes the message as a string, e.g. "Hello, world!" or JSON.stringify(someObject)
+const publishData = withServiceErrorHandling(async (publishableData) => {
+  console.log(publishableData)
+  const data = JSON.stringify(publishableData);
   const dataBuffer = Buffer.from(data);
   const messageId = await pubSubClient
     .topic(topicId)
