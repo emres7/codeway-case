@@ -2,7 +2,9 @@ const express = require('express')
 const helmet = require('helmet');
 const cors = require('cors');
 const compression = require('compression');
-const { PubSub } = require('@google-cloud/pubsub');
+const { PubSub } = require('@google-cloud/pubsub')
+const { BigQuery } = require('@google-cloud/bigquery');
+
 const loader = require('./loaders');
 
 
@@ -13,49 +15,32 @@ const app = express()
 // Creates a client; cache this for further use
 const projectId = process.env.PROJECT_ID
 const topicId = process.env.TOPIC_ID
+
+const datasetId = process.env.DATASET_ID
+const tableId = process.env.TABLE_ID
+
 const pubSubClient = new PubSub({projectId});
+const bigqueryClient = new BigQuery({projectId});
 
 
-async function quickstart(
-) {
-  let projectId = 'projectname' // Your Google Cloud Platform project ID
-  let topicNameOrId = 'topicname' // Name for the new topic to create
-  let subscriptionName = 'subscrptionname' // Name for the new subscription to create
-  // Instantiates a client
-  const pubsub = new PubSub({projectId});
-
-  // Creates a new topic
-  const [topic] = await pubsub.createTopic(topicNameOrId);
-  console.log(`Topic ${topic.name} created.`);
-
-  // Creates a subscription on that new topic
-  const [subscription] = await topic.createSubscription(subscriptionName);
-
-  // Receive callbacks for new messages on the subscription
-  subscription.on('message', message => {
-    console.log('Received message:', message.data.toString());
-    process.exit(0);
-  });
-
-  // Receive callbacks for errors on the subscription
-  subscription.on('error', error => {
-    console.error('Received error:', error);
-    process.exit(1);
-  });
-
-  // Send a message to the topic
-  topic.publishMessage({data: Buffer.from('Test message!')});
-}
-
-
-app.post('/logs', async (req, res) => {
+app.post('/publish', async (req, res) => {
   let logData = req.body; // Extract event log data from the request
-
   try {
-    const data = "Hello, world!"
+    const reqData = {
+      "type": "event",
+      "session_id": "9FDA74C2-AB57-4840-87D0-64324772B5A2", 
+      "event_name": "click",
+      "page": "main",
+      "event_time": 1589623711,
+      "country": "TR",
+      "region": "Marmaray",
+      "city": "Istanbul",
+      "user_id": "Uu1qJzlfrxYxOS5z1kfAbmSA5pF2"
+      }
+    const data = JSON.stringify(reqData)
     // Publishes the message as a string, e.g. "Hello, world!" or JSON.stringify(someObject)
     const dataBuffer = Buffer.from(data);
-
+    console.log(dataBuffer)
     const messageId = await pubSubClient
       .topic(topicId)
       .publishMessage({data: dataBuffer});
@@ -68,17 +53,35 @@ app.post('/logs', async (req, res) => {
   }
 });
 
-app.post('/logs1', async (req, res) => {
-  try{
-    quickstart()
-  } catch (error) {
-    console.error(`Received error while publishing: ${error.message}`);
-    res.sendStatus(500);
-    process.exitCode = 1;
+
+app.get('/analytics', async (req, res) => {
+  try {
+    // Query to get the required analytics data
+    const query = `
+      SELECT
+        COUNT(DISTINCT user_id) AS total_user_count,
+        DATE(TIMESTAMP_SECONDS(event_time)) AS date,
+        COUNTIF(DATE(TIMESTAMP_SECONDS(event_time)) = CURRENT_DATE()) AS daily_active_user_count
+      FROM
+        ${datasetId}.${tableId}
+      GROUP BY
+        date
+    `;
+
+    // Run the query
+    const [rows] = await bigqueryClient.query(query);
+
+    if (rows.length === 0) {
+      res.status(404).send('No data available for today.');
+    } else {
+      const analyticsData = rows[0];
+      res.status(200).json(analyticsData);
+    }
+  } catch (err) {
+    console.error('Error fetching analytics data:', err);
+    res.status(500).send('Error fetching analytics data.');
   }
-})
-
-
+});
 
 app.use(express.json({limit: '150mb'}));
 app.use(express.urlencoded({ extended: true }));
