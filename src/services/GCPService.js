@@ -12,8 +12,36 @@ const tableId = process.env.TABLE_ID;
 const pubSubClient = new PubSub({ projectId });
 const bigqueryClient = new BigQuery({ projectId });
 
+const analyticsQuery = (datasetId, tableId) => {
+  return `
+  WITH session_durations AS (
+    SELECT
+      session_id,
+      TIMESTAMP_SECONDS(MIN(event_time)) AS session_start_time,
+      TIMESTAMP_SECONDS(MAX(event_time)) AS session_end_time,
+    FROM
+      ${datasetId}.${tableId}
+    GROUP BY
+      session_id
+  )
+  SELECT
+    COUNT(DISTINCT user_id) AS total_users,
+    DATE(TIMESTAMP_SECONDS(event_time)) AS date,
+    COUNT(DISTINCT user_id) AS daily_active_user_count,
+    COUNTIF(event_name = 'app_install') AS daily_new_users,
+    AVG(TIMESTAMP_DIFF(session_end_time, session_start_time, MINUTE)) AS average_session_duration
+  FROM
+    ${datasetId}.${tableId}
+  LEFT JOIN
+    session_durations
+  USING
+    (session_id)
+  GROUP BY
+    date;
+      `;
+};
+
 const publishData = withServiceErrorHandling(async (publishableData) => {
-  console.log(publishableData)
   const data = JSON.stringify(publishableData);
   const dataBuffer = Buffer.from(data);
   const messageId = await pubSubClient
@@ -23,25 +51,10 @@ const publishData = withServiceErrorHandling(async (publishableData) => {
   return messageId;
 });
 
-const retrieveFromQuery = withServiceErrorHandling(async (data) => {
-  const query = `
-        SELECT
-          COUNT(DISTINCT user_id) AS total_user_count,
-          DATE(TIMESTAMP_SECONDS(event_time)) AS date,
-          COUNTIF(DATE(TIMESTAMP_SECONDS(event_time)) = CURRENT_DATE()) AS daily_active_user_count
-        FROM
-          ${datasetId}.${tableId}
-        GROUP BY
-          date
-      `;
-
-  // Run the query
-  const [rows] = await bigqueryClient.query(query);
-
-  if (rows.length !== 0) {
-    const analyticsData = rows[0];
-    return analyticsData;
-  }
+const retrieveFromQuery = withServiceErrorHandling(async () => {
+  const query = analyticsQuery(datasetId, tableId);
+  const [result] = await bigqueryClient.query(query);
+  return result;
 });
 
 module.exports = {
