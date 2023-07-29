@@ -5,4 +5,5 @@
 * done - Dockerize
 * done - Add detailed README 
 * done - Add simple jwt authentication
+* not done - add swagger documentation
 * not done - if time left -> kubernetes, move gcpservice to external services
