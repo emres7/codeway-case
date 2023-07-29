@@ -59,9 +59,12 @@ curl -H "authorization: your-generated-jwt-token" http://localhost:3000/api/v2/l
 
 #### Available Requests
 * GET:  /logs/analytics <br/>
+<br/>
 No parameters <br/>
 Returns analytics <br/>
+<br/>
 * POST: /logs/publish <br/>
+<br/>
 Params : 
 "type": str, required <br/>
 "session_id": str, required <br/>
@@ -72,8 +75,7 @@ Params :
 "region": str, required <br/>
 "city": str, required <br/>
 "user_id": str, required <br/>
-<br/>
-Save given log to database <br/>
+Saves given log to database <br/>
 
 ### Design Choices
 * Architecture
