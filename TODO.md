@@ -4,4 +4,5 @@
 * done - Full functional aggregation
 * done - Dockerize
 * done - Add detailed README 
+* done - Add simple jwt authentication
 * not done - if time left -> kubernetes, move gcpservice to external services
